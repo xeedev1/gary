@@ -259,17 +259,35 @@ app.get('/total-value/:address', (req, res) => {
 // Endpoint to get transaction history
 app.get('/get-date-info/:address', (req, res) => {
 	const address = req.params.address;
-	getTxHistory(address)
+	getPageNumber(address).then((response)=>{
+		// console.log(response.data.count);
+		let numberOfPages = Math.ceil(response.data.count / 100);
+		// console.log(numberOfPages);
+		getTxHistory(address, numberOfPages)
 		.then((response) => {
-			const is90DaysOld = checkIf90DaysOld(response.data);
+			
+			let isAbove90 = false;
+			let lastTDate = response.data.data[response.data.data.length-1].block_timestamp;
+			// check if date is 90 days old 
+			const dateString = lastTDate;
+			const date = new Date(dateString);
+			const currentDate = new Date();
+			const daysDiff = Math.round(Math.abs((currentDate - date) / (24 * 60 * 60 * 1000)));
+			if(daysDiff > 90) {
+				isAbove90 = true;
+			}
+
 			res.json({
-				'date': response.data.data[response.data.count - 1].block_timestamp,
-				'is90DaysOld': is90DaysOld
+				'date': lastTDate,
+				'is90DaysOld': isAbove90
 			});
+			// console.log(response.data);
+			// res.json(response.data.data[response.data.data.length-1].block_timestamp); 
 		})
 		.catch((error) => {
 			res.status(500).json({ error: error.message });
 		});
+	});
 });
 
 // Function to get assets value
@@ -300,8 +318,8 @@ function calculateTotalValue(data) {
 	return totalValue;
 }
 
-// Function to get transaction history
-async function getTxHistory(address) {
+
+async function getPageNumber(address) {
 	const requestOptions = {
 		method: 'get',
 		headers: {
@@ -311,19 +329,40 @@ async function getTxHistory(address) {
 		},
 	};
 
-	const url = `https://api.chainbase.online/v1/account/txs?chain_id=1&address=${address}&from_block=0`;
+
+	const url = `https://api.chainbase.online/v1/account/txs?chain_id=1&address=${address}&page=3&limit=100`;
 	return axios(url, requestOptions);
 }
 
-// Function to check if transaction is 90 days old
-function checkIf90DaysOld(data) {
-	const dateString = data.data[data.count - 1].block_timestamp;
-	const date = new Date(dateString);
-	const currentDate = new Date();
-	const daysDiff = Math.round(Math.abs((currentDate - date) / (24 * 60 * 60 * 1000)));
-	return daysDiff > 90;
+// Function to get transaction history
+async function getTxHistory(address, numberOfPages) {
+	const requestOptions = {
+		method: 'get',
+		headers: {
+			'accepts': 'application/json',
+			"x-api-key": "demo",
+			'Access-Control-Allow-Origin': '*'
+		},
+	};
+	console.log(numberOfPages);
+
+	const url = `https://api.chainbase.online/v1/account/txs?chain_id=1&address=${address}&page=${numberOfPages}&limit=100`;
+	return axios(url, requestOptions);
 }
+
+
+// Function to check if transaction is 90 days old
+// function checkIf90DaysOld(data) {
+// 	const dateString = data.data[data.count - 1].block_timestamp;
+// 	const date = new Date(dateString);
+// 	const currentDate = new Date();
+// 	const daysDiff = Math.round(Math.abs((currentDate - date) / (24 * 60 * 60 * 1000)));
+// 	return daysDiff > 90;
+// }
 
 app.listen(process.env.PORT || 8080, () => {
 	console.log('listening on port 8080');
 });
+
+//address: 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+//tx:      0x4868F1B29e3bEF7e65AaE55dDe59Fb9963220C00
