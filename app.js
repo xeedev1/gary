@@ -279,7 +279,7 @@ app.get('/get-date-info/:address', (req, res) => {
 
 			res.json({
 				'date': lastTDate,
-				'is90DaysOld': isAbove90
+				'isAbove90DaysOld': isAbove90
 			});
 			// console.log(response.data);
 			// res.json(response.data.data[response.data.data.length-1].block_timestamp); 
